@@ -17,10 +17,10 @@ async fn main() {
     log::info!("Config loaded: {:?}", config);
 
 
-    let database_url = config
-        .database_url.clone()
-        .or_else(|| std::env::var("DATABASE_URL").ok())
-        .expect("DATABASE_URL is not set in config or environment");
+    let database_url = std::env::var("DATABASE_URL")
+        .ok()
+        .or_else(|| config.database_url.clone())
+        .expect("DATABASE_URL is not set in environment or config");
 
     let db = Arc::new(
         Database::connect(&database_url)

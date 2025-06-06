@@ -1,11 +1,42 @@
 services:
- rustotool:
-   build:
-     context: .
-     dockerfile: Dockerfile
-   container_name: rustotool
-   environment:
-     LLM_API_URL: $LLM_API_URL
-     LLM_API_TOKEN: $LLM_API_TOKEN
-     DATABASE_URL: $DATABASE_URL
-     TELEGRAM_TOKEN: $TELEGRAM_TOKEN
+  rustotool:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rustotool-bot
+    environment:
+      LLM_API_URL: $LLM_API_URL
+      LLM_API_TOKEN: $LLM_API_TOKEN
+      DATABASE_URL: postgresql://${DATABASE_USER:-dev}:${DATABASE_PASSWORD:-dev_pass}@rustotool-db:5432/${DATABASE_NAME:-dev_db}
+      TELEGRAM_TOKEN: $TELEGRAM_TOKEN
+      RUST_BACKTRACE: 1
+    depends_on:
+      rustotool-db:
+        condition: service_healthy
+
+  rustotool-db:
+    container_name: rustotool-db
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-dev}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-dev_pass}
+      PGDATA: /data/postgres
+      POSTGRES_DB: ${DATABASE_NAME:-dev_db}
+    volumes:
+      - rustotool-db:/data/postgres
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DATABASE_USER:-dev} -d ${DATABASE_NAME:-dev_db}",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  rustotool-db:
